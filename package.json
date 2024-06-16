@@ -1,6 +1,6 @@
 {
   "name": "http-generator",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Generate .http files from OpenAPI specifications",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
