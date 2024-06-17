@@ -1,5 +1,11 @@
 # http-generator
 
+## 0.0.3
+
+### Patch Changes
+
+- 71c6a2e: Fix base url
+
 ## 0.0.2
 
 ### Patch Changes
