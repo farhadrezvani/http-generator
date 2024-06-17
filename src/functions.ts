@@ -137,7 +137,7 @@ export function convertToHttpFile(
     )}${path}\n`;
 
     if (token) {
-      content += `Authorization: Bearer ${token}\n`;
+      content += `Authorization: ${token}\n`;
     }
 
     if (operation?.parameters) {
