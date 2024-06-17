@@ -1,5 +1,11 @@
 # http-generator
 
+## 0.0.5
+
+### Patch Changes
+
+- fe9a35e: Fix authorization token
+
 ## 0.0.4
 
 ### Patch Changes
