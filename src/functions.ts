@@ -1,7 +1,14 @@
 import OpenAPIParser from "@readme/openapi-parser";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import fs, { existsSync, mkdirSync, writeFileSync } from "fs";
 import * as path from "path";
 import type { OpenAPIOperation, OpenAPISchema, OpenAPISpec } from "./types";
+
+export function getPackageInfo() {
+  const packageJsonPath = path.resolve(__dirname, "../package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+
+  return { name: packageJson.name, version: packageJson.version };
+}
 
 export function validateOptions(options: any) {
   if (!options.input) {
