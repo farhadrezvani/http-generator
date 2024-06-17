@@ -1,5 +1,11 @@
 # http-generator
 
+## 0.0.4
+
+### Patch Changes
+
+- 42a588e: Reduce bundle size
+
 ## 0.0.3
 
 ### Patch Changes
