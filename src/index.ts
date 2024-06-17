@@ -39,7 +39,12 @@ async function main(options: any) {
       options.input,
       options.skipValidation
     );
-    convertToHttpFile(openAPISpec, options.output, options.token);
+    convertToHttpFile(
+      openAPISpec,
+      options.output,
+      options.baseUrl,
+      options.token
+    );
   } catch (error) {
     handleError(error);
   }

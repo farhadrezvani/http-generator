@@ -83,6 +83,10 @@ const toPascalCase = (str: string) => {
     ?.join("");
 };
 
+const removeTrailingSlash = (url: string) => {
+  return url.endsWith("/") ? url.slice(0, -1) : url;
+};
+
 export function writeFileOrCreateDirectory(
   filePath: string,
   content: string
@@ -106,10 +110,12 @@ export function writeFileOrCreateDirectory(
 export function convertToHttpFile(
   openAPISpec: OpenAPISpec,
   outputDir: string,
-  token: string
+  baseUrl?: string,
+  token?: string
 ) {
-  const basePath = openAPISpec.basePath || "";
-  const serverUrl = openAPISpec.servers?.[0]?.url || "";
+  const basePath = openAPISpec.basePath;
+  const serverUrl = openAPISpec.servers?.[0]?.url;
+  const apiEndpoint = baseUrl || basePath || serverUrl || "";
 
   const generateHttpFileContent = (
     path: string,
@@ -126,7 +132,9 @@ export function convertToHttpFile(
       content += `# ${operation.description}\n`;
     }
 
-    content += `${method.toUpperCase()} ${serverUrl}${basePath}${path}\n`;
+    content += `${method.toUpperCase()} ${removeTrailingSlash(
+      apiEndpoint
+    )}${path}\n`;
 
     if (token) {
       content += `Authorization: Bearer ${token}\n`;
