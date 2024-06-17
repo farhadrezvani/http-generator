@@ -143,10 +143,6 @@ export function convertToHttpFile(
       apiEndpoint
     )}${path}\n`;
 
-    if (token) {
-      content += `Authorization: ${token}\n`;
-    }
-
     if (operation?.parameters) {
       for (const param of operation.parameters) {
         if (param.in === "query") {
@@ -167,6 +163,10 @@ export function convertToHttpFile(
       } else {
         content += `${JSON.stringify(example, null, 2)}\n`;
       }
+    }
+
+    if (token) {
+      content += `Authorization: ${token}\n`;
     }
 
     if (isHttpFile) {
