@@ -1,15 +1,10 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import {
-  convertToHttpFile,
-  getPackageInfo,
-  handleError,
-  loadOpenAPISpec,
-  validateOptions,
-} from "./functions";
+import { convertToHttpFile, loadOpenAPISpec } from "./functions";
+import { handleError, packageInfo, validateOptions } from "./utils";
 
-const { name, version } = getPackageInfo();
+const { name, version } = packageInfo();
 const program = new Command();
 
 program

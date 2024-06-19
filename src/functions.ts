@@ -1,32 +1,8 @@
 import OpenAPIParser from "@readme/openapi-parser";
-import fs, { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import * as path from "path";
 import type { OpenAPIOperation, OpenAPISchema, OpenAPISpec } from "./types";
-
-export function getPackageInfo() {
-  const packageJsonPath = path.resolve(__dirname, "../package.json");
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-
-  return { name: packageJson.name, version: packageJson.version };
-}
-
-export function validateOptions(options: any) {
-  if (!options.input) {
-    throw new Error("Input file is required.");
-  }
-  if (!options.output) {
-    throw new Error("Output file is required.");
-  }
-}
-
-export function handleError(error: unknown) {
-  if (error instanceof Error) {
-    console.error(`Error: ${error.message}`);
-  } else {
-    console.error("An unknown error occurred");
-  }
-  process.exit(1);
-}
+import { formatCommentLines, removeTrailingSlash, toPascalCase } from "./utils";
 
 export async function loadOpenAPISpec(
   filePath: string,
@@ -83,17 +59,6 @@ export function generateExampleValue(schema: any): any {
   }
 }
 
-const toPascalCase = (str: string) => {
-  return str
-    .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
-    ?.map((x) => x.slice(0, 1).toUpperCase() + x.slice(1).toLowerCase())
-    ?.join("");
-};
-
-const removeTrailingSlash = (url: string) => {
-  return url.endsWith("/") ? url.slice(0, -1) : url;
-};
-
 export function writeFileOrCreateDirectory(
   filePath: string,
   content: string
@@ -132,11 +97,11 @@ export function convertToHttpFile(
     let content = "";
 
     if (operation.summary) {
-      content += `# ${operation.summary}\n`;
+      content += formatCommentLines(operation.summary);
     }
 
     if (operation.description) {
-      content += `# ${operation.description}\n`;
+      content += formatCommentLines(operation.description);
     }
 
     content += `${method.toUpperCase()} ${removeTrailingSlash(
