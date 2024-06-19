@@ -3,7 +3,7 @@
   "version": "0.0.5",
   "description": "Generate .http files from OpenAPI specifications",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "keywords": [
     "swagger",
     "openapi",
@@ -20,14 +20,14 @@
   },
   "license": "MIT",
   "bin": {
-    "http-generator": "./dist/index.js"
+    "http-generator": "./dist/cli.js"
   },
   "repository": {
     "url": "https://github.com/farhadrezvani/http-generator"
   },
   "scripts": {
-    "dev": "tsup src/index.ts --watch",
-    "build": "tsup src/index.ts --format cjs,esm",
+    "dev": "tsup src/cli.ts --watch",
+    "build": "tsup src/cli.ts src/index.ts --clean --splitting",
     "release": "pnpm build && changeset publish",
     "lint": "tsc"
   },
