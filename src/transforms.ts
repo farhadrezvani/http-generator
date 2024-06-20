@@ -2,7 +2,11 @@ import OpenAPIParser from "@readme/openapi-parser";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import * as path from "path";
 import type { OpenAPIOperation, OpenAPISchema, OpenAPISpec } from "./types";
-import { formatCommentLines, removeTrailingSlash, toPascalCase } from "./utils";
+import {
+  formatCommentLines,
+  generateFileName,
+  removeTrailingSlash,
+} from "./utils";
 
 export async function loadOpenAPISpec(
   filePath: string,
@@ -21,12 +25,21 @@ export function extractRequestBodyExample(content: any): any {
       content[jsonContentType].examples?.[0]?.value ||
       generateExampleFromSchema(content[jsonContentType].schema)
     );
+  } else {
+    return generateExampleFromSchema(content.schema);
   }
-  return "-- Add your payload here --";
 }
 
 export function generateExampleFromSchema(schema: OpenAPISchema): any {
   if (!schema) return {};
+
+  if (schema.type === "array" && schema.items) {
+    const exampleArray: any[] = [];
+    const itemExample = generateExampleFromSchema(schema.items);
+    exampleArray.push(itemExample);
+    return exampleArray;
+  }
+
   const example: any = {};
 
   if (schema.properties) {
@@ -43,7 +56,7 @@ export function generateExampleValue(schema: any): any {
 
   switch (schema.type) {
     case "string":
-      return schema.enum ? schema.enum.join(",") : schema.format || schema.type;
+      return schema.enum ? schema.enum[0] : schema.format || schema.type;
     case "number":
       return 0;
     case "integer":
@@ -85,9 +98,10 @@ export function convertToHttpFile(
   baseUrl?: string,
   token?: string
 ) {
+  const host = openAPISpec.host;
   const basePath = openAPISpec.basePath;
   const serverUrl = openAPISpec.servers?.[0]?.url;
-  const apiEndpoint = baseUrl || basePath || serverUrl || "";
+  const apiEndpoint = baseUrl || host + basePath || serverUrl || "";
 
   const generateHttpFileContent = (
     path: string,
@@ -97,11 +111,11 @@ export function convertToHttpFile(
     let content = "";
 
     if (operation.summary) {
-      content += formatCommentLines(operation.summary);
+      content += formatCommentLines(`Summary: ${operation.summary}`);
     }
 
     if (operation.description) {
-      content += formatCommentLines(operation.description);
+      content += formatCommentLines(`Description: ${operation.description}`);
     }
 
     content += `${method.toUpperCase()} ${removeTrailingSlash(
@@ -118,7 +132,12 @@ export function convertToHttpFile(
       }
     }
 
+    if (token) {
+      content += `Authorization: {{authorization}}\n`;
+    }
+
     if (operation?.requestBody && operation.requestBody.content) {
+      // OpenAPI 3.0
       const contentType = Object.keys(operation.requestBody.content)[0];
       content += `Content-Type: ${contentType}\n\n`;
 
@@ -128,10 +147,21 @@ export function convertToHttpFile(
       } else {
         content += `${JSON.stringify(example, null, 2)}\n`;
       }
-    }
+    } else if (operation?.parameters) {
+      // Swagger 2.0
+      const bodyParam = operation.parameters.find(
+        (param) => param.in === "body"
+      );
+      if (bodyParam) {
+        content += `Content-Type: application/json\n\n`;
 
-    if (token) {
-      content += `Authorization: ${token}\n`;
+        const example = extractRequestBodyExample(bodyParam);
+        if (typeof example === "string") {
+          content += `${example}\n`;
+        } else {
+          content += `${JSON.stringify(example, null, 2)}\n`;
+        }
+      }
     }
 
     if (isHttpFile) {
@@ -146,6 +176,10 @@ export function convertToHttpFile(
   if (isHttpFile) {
     let httpFileContent = "";
 
+    if (token) {
+      httpFileContent += `@authorization = ${token}\n\n`;
+    }
+
     for (const [path, methods] of Object.entries(openAPISpec.paths)) {
       for (const [method, operation] of Object.entries(methods)) {
         httpFileContent += generateHttpFileContent(path, method, operation);
@@ -156,16 +190,17 @@ export function convertToHttpFile(
   } else {
     for (const [path, methods] of Object.entries(openAPISpec.paths)) {
       for (const [method, operation] of Object.entries(methods)) {
-        const httpFileContent = generateHttpFileContent(
-          path,
-          method,
-          operation
-        );
+        let httpFileContent = "";
+
+        if (token) {
+          httpFileContent += `@authorization=${token}\n\n`;
+        }
+
+        httpFileContent += generateHttpFileContent(path, method, operation);
         const sanitizedPath = path.replace(/[\/{}]/g, "-");
-        const operationId =
-          operation.operationId || `${method}${sanitizedPath}`;
-        const camelCaseOperationId = toPascalCase(operationId);
-        const outputFilePath = `${outputDir}/${camelCaseOperationId}.http`;
+        const operationId = operation.operationId || sanitizedPath;
+        const filename = generateFileName(method, operationId);
+        const outputFilePath = `${outputDir}/${filename}.http`;
 
         writeFileOrCreateDirectory(outputFilePath, httpFileContent);
       }

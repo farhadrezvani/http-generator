@@ -15,6 +15,12 @@ export function toPascalCase(str: string) {
     ?.join("");
 }
 
+export function generateFileName(method: string, str: string) {
+  const filename = str.replace(method, "");
+
+  return toPascalCase(`${method}-${filename}`);
+}
+
 export function removeTrailingSlash(url: string) {
   return url.endsWith("/") ? url.slice(0, -1) : url;
 }

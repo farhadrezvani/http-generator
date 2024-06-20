@@ -42,7 +42,7 @@ export interface OpenAPIParameterV2 {
 
 export interface OpenAPIParameterV3 {
   name: string;
-  in: "query" | "header" | "path" | "cookie";
+  in: "query" | "header" | "path" | "cookie" | "body";
   description?: string;
   required?: boolean;
   deprecated?: boolean;
@@ -148,6 +148,7 @@ export interface OpenAPISpec {
   swagger?: string;
   openapi?: string;
   paths: OpenAPIPath;
+  host: string;
   basePath?: string;
   servers?: OpenAPIServer[];
 }
