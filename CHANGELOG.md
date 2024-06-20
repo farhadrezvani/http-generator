@@ -1,5 +1,11 @@
 # http-generator
 
+## 0.0.7
+
+### Patch Changes
+
+- 511b981: Add swagger support
+
 ## 0.0.6
 
 ### Patch Changes
