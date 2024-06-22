@@ -92,6 +92,38 @@ export function writeFileOrCreateDirectory(
   }
 }
 
+export function generateRequestBody(
+  contentType: string | undefined,
+  param: any
+) {
+  let content = `Content-Type: ${contentType}\n\n`;
+  const example = extractRequestBodyExample(param);
+
+  if (typeof example === "string") {
+    content += `${example}\n`;
+  } else {
+    content += `${JSON.stringify(example, null, 2)}\n`;
+  }
+
+  return content;
+}
+
+function generatePathVariable(str: string): string {
+  return str.replace(/{([^{}]+)}/g, "{{$1}}");
+}
+
+function generateContent(...parts: string[]): string {
+  return parts.join("");
+}
+
+function addAuthorization(token?: string) {
+  let auth = "";
+  if (token) {
+    auth = `@authorization = ${token}\n\n`;
+  }
+  return auth;
+}
+
 export function convertToHttpFile(
   openAPISpec: OpenAPISpec,
   outputDir: string,
@@ -108,61 +140,69 @@ export function convertToHttpFile(
     method: string,
     operation: OpenAPIOperation
   ) => {
-    let content = "";
+    let httpComment = "";
+    let httpVariable = "";
+    let httpUrl = "";
+    let httpParam = "";
+    let httpBody = "";
+
+    path = generatePathVariable(path);
 
     if (operation.summary) {
-      content += formatCommentLines(`Summary: ${operation.summary}`);
+      httpComment += formatCommentLines(`Summary: ${operation.summary}`);
     }
 
     if (operation.description) {
-      content += formatCommentLines(`Description: ${operation.description}`);
+      httpComment += formatCommentLines(
+        `Description: ${operation.description}`
+      );
     }
 
-    content += `${method.toUpperCase()} ${removeTrailingSlash(
+    httpUrl += `${method.toUpperCase()} ${removeTrailingSlash(
       apiEndpoint
     )}${path}\n`;
 
     if (operation?.parameters) {
       for (const param of operation.parameters) {
+        const schema = param.schema || { ...param };
+
         if (param.in === "query") {
-          content += `?${param.name}=${generateExampleValue(param.schema)}\n`;
-        } else if (param.in === "header") {
-          content += `${param.name}:${generateExampleValue(param.schema)}\n`;
+          httpVariable += `@${param.name}=${generateExampleValue(schema)}\n`;
+          httpParam += `?${param.name}={{${param.name}}}\n`;
+        }
+        if (param.in === "header") {
+          httpVariable += `@${param.name}=${generateExampleValue(schema)}\n`;
+          httpParam += `${param.name}:{{${param.name}}}\n`;
+        }
+        if (param.in === "path") {
+          httpVariable += `@${param.name}=${generateExampleValue(schema)}\n`;
+        }
+        if (param.in === "body") {
+          httpBody += generateRequestBody("application/json", param);
         }
       }
     }
 
     if (token) {
-      content += `Authorization: {{authorization}}\n`;
+      httpParam += `Authorization: {{authorization}}\n`;
     }
 
     if (operation?.requestBody && operation.requestBody.content) {
-      // OpenAPI 3.0
       const contentType = Object.keys(operation.requestBody.content)[0];
-      content += `Content-Type: ${contentType}\n\n`;
 
-      const example = extractRequestBodyExample(operation.requestBody.content);
-      if (typeof example === "string") {
-        content += `${example}\n`;
-      } else {
-        content += `${JSON.stringify(example, null, 2)}\n`;
-      }
-    } else if (operation?.parameters) {
-      // Swagger 2.0
-      const bodyParam = operation.parameters.find(
-        (param) => param.in === "body"
+      httpBody += generateRequestBody(
+        contentType,
+        operation.requestBody.content
       );
-      if (bodyParam) {
-        content += `Content-Type: application/json\n\n`;
-
-        const example = extractRequestBodyExample(bodyParam);
-        if (typeof example === "string") {
-          content += `${example}\n`;
-        } else {
-          content += `${JSON.stringify(example, null, 2)}\n`;
-        }
-      }
     }
+
+    let content = generateContent(
+      httpComment,
+      httpVariable,
+      httpUrl,
+      httpParam,
+      httpBody
+    );
 
     if (isHttpFile) {
       content += "\n###\n\n";
@@ -174,11 +214,7 @@ export function convertToHttpFile(
   const isHttpFile = path.extname(outputDir).toLowerCase() === ".http";
 
   if (isHttpFile) {
-    let httpFileContent = "";
-
-    if (token) {
-      httpFileContent += `@authorization = ${token}\n\n`;
-    }
+    let httpFileContent = addAuthorization(token);
 
     for (const [path, methods] of Object.entries(openAPISpec.paths)) {
       for (const [method, operation] of Object.entries(methods)) {
@@ -190,11 +226,7 @@ export function convertToHttpFile(
   } else {
     for (const [path, methods] of Object.entries(openAPISpec.paths)) {
       for (const [method, operation] of Object.entries(methods)) {
-        let httpFileContent = "";
-
-        if (token) {
-          httpFileContent += `@authorization=${token}\n\n`;
-        }
+        let httpFileContent = addAuthorization(token);
 
         httpFileContent += generateHttpFileContent(path, method, operation);
         const sanitizedPath = path.replace(/[\/{}]/g, "-");
