@@ -1,5 +1,11 @@
 # http-generator
 
+## 0.0.8
+
+### Patch Changes
+
+- 3867a35: Fix request path variables
+
 ## 0.0.7
 
 ### Patch Changes
