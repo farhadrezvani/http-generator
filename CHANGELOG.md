@@ -1,5 +1,11 @@
 # http-generator
 
+## 0.0.9
+
+### Patch Changes
+
+- 4f5a64f: Add prefix for single http file variables
+
 ## 0.0.8
 
 ### Patch Changes
