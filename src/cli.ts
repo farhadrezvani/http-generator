@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import { version } from "../package.json";
 import { convertToHttpFile, loadOpenAPISpec } from "./transforms";
-import { handleError, packageInfo, validateOptions } from "./utils";
+import { handleError, validateOptions } from "./utils";
 
-const { name, version } = packageInfo();
 const program = new Command();
 
 program
@@ -17,7 +17,7 @@ program
     "Skip validation of OpenAPI Specification",
     false
   )
-  .name(name)
+  .name("http-generator")
   .version(version, "-v, --version", "Display version number")
   .helpOption("-h, --help", "Display this message")
   .description("Generate .http files from OpenAPI specifications");

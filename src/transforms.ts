@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import * as path from "path";
 import type { OpenAPIOperation, OpenAPISchema, OpenAPISpec } from "./types";
 import {
+  deduplicateMethod,
   formatCommentLines,
-  generateFileName,
   removeTrailingSlash,
 } from "./utils";
 
@@ -108,20 +108,34 @@ export function generateRequestBody(
   return content;
 }
 
-function generatePathVariable(str: string): string {
-  return str.replace(/{([^{}]+)}/g, "{{$1}}");
+export function generatePathVariable(str: string, name?: string): string {
+  const pathVariable = name ? `{{${name}_$1}}` : "{{$1}}";
+  return str.replace(/{([^{}]+)}/g, pathVariable);
 }
 
-function generateContent(...parts: string[]): string {
+export function generateContent(...parts: string[]): string {
   return parts.join("");
 }
 
-function addAuthorization(token?: string) {
+export function addAuthorization(token?: string) {
   let auth = "";
   if (token) {
     auth = `@authorization = ${token}\n\n`;
   }
   return auth;
+}
+
+export function generateUniqueName(
+  method: string,
+  path: string,
+  operation: OpenAPIOperation,
+  name?: string
+) {
+  const operationId = operation.operationId || path;
+  const operationName = deduplicateMethod(method, operationId);
+  const uniqueName = name ? `${operationName}_${name}` : operationName;
+
+  return uniqueName;
 }
 
 export function convertToHttpFile(
@@ -134,6 +148,7 @@ export function convertToHttpFile(
   const basePath = openAPISpec.basePath;
   const serverUrl = openAPISpec.servers?.[0]?.url;
   const apiEndpoint = baseUrl || host + basePath || serverUrl || "";
+  const isHttpFile = path.extname(outputDir).toLowerCase() === ".http";
 
   const generateHttpFileContent = (
     path: string,
@@ -146,7 +161,11 @@ export function convertToHttpFile(
     let httpParam = "";
     let httpBody = "";
 
-    path = generatePathVariable(path);
+    const variablePrefix = isHttpFile
+      ? generateUniqueName(method, path, operation)
+      : undefined;
+
+    path = generatePathVariable(path, variablePrefix);
 
     if (operation.summary) {
       httpComment += formatCommentLines(`Summary: ${operation.summary}`);
@@ -165,17 +184,22 @@ export function convertToHttpFile(
     if (operation?.parameters) {
       for (const param of operation.parameters) {
         const schema = param.schema || { ...param };
+        const variableName = variablePrefix
+          ? `${variablePrefix}_${param.name}`
+          : param.name;
 
         if (param.in === "query") {
-          httpVariable += `@${param.name}=${generateExampleValue(schema)}\n`;
-          httpParam += `?${param.name}={{${param.name}}}\n`;
+          httpVariable += `@${variableName}=${generateExampleValue(schema)}\n`;
+          httpParam += `${httpParam.length ? "&" : "?"}${
+            param.name
+          }={{${variableName}}}\n`;
         }
         if (param.in === "header") {
-          httpVariable += `@${param.name}=${generateExampleValue(schema)}\n`;
-          httpParam += `${param.name}:{{${param.name}}}\n`;
+          httpVariable += `@${variableName}=${generateExampleValue(schema)}\n`;
+          httpParam += `${param.name}:{{${variableName}}}\n`;
         }
         if (param.in === "path") {
-          httpVariable += `@${param.name}=${generateExampleValue(schema)}\n`;
+          httpVariable += `@${variableName}=${generateExampleValue(schema)}\n`;
         }
         if (param.in === "body") {
           httpBody += generateRequestBody("application/json", param);
@@ -211,8 +235,6 @@ export function convertToHttpFile(
     return content;
   };
 
-  const isHttpFile = path.extname(outputDir).toLowerCase() === ".http";
-
   if (isHttpFile) {
     let httpFileContent = addAuthorization(token);
 
@@ -229,10 +251,9 @@ export function convertToHttpFile(
         let httpFileContent = addAuthorization(token);
 
         httpFileContent += generateHttpFileContent(path, method, operation);
-        const sanitizedPath = path.replace(/[\/{}]/g, "-");
-        const operationId = operation.operationId || sanitizedPath;
-        const filename = generateFileName(method, operationId);
-        const outputFilePath = `${outputDir}/${filename}.http`;
+
+        const fileName = generateUniqueName(method, path, operation);
+        const outputFilePath = `${outputDir}/${fileName}.http`;
 
         writeFileOrCreateDirectory(outputFilePath, httpFileContent);
       }

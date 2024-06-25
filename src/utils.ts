@@ -1,13 +1,3 @@
-import fs from "fs";
-import * as path from "path";
-
-export function packageInfo() {
-  const packageJsonPath = path.resolve(__dirname, "../package.json");
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-
-  return { name: packageJson.name, version: packageJson.version };
-}
-
 export function toPascalCase(str: string) {
   return str
     .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
@@ -15,7 +5,7 @@ export function toPascalCase(str: string) {
     ?.join("");
 }
 
-export function generateFileName(method: string, str: string) {
+export function deduplicateMethod(method: string, str: string) {
   const filename = str.replace(method, "");
 
   return toPascalCase(`${method}-${filename}`);
