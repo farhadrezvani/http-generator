@@ -1,5 +1,11 @@
 # http-generator
 
+## 0.1.0
+
+### Minor Changes
+
+- 06a7c52: Add config file support
+
 ## 0.0.9
 
 ### Patch Changes
