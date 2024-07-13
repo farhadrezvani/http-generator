@@ -10,7 +10,7 @@ import {
 
 export async function loadOpenAPISpec(
   filePath: string,
-  skipValidation: boolean
+  skipValidation: boolean = false
 ): Promise<OpenAPISpec> {
   return OpenAPIParser.validate(filePath, {
     validate: { schema: !skipValidation, spec: !skipValidation },

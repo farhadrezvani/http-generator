@@ -1,3 +1,5 @@
+import { ValiError } from "valibot";
+
 export function toPascalCase(str: string) {
   return str
     .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
@@ -24,17 +26,10 @@ export function formatCommentLines(text: string) {
   return `${comment}\n`;
 }
 
-export function validateOptions(options: any) {
-  if (!options.input) {
-    throw new Error("Input file is required.");
-  }
-  if (!options.output) {
-    throw new Error("Output file is required.");
-  }
-}
-
 export function handleError(error: unknown) {
-  if (error instanceof Error) {
+  if (error instanceof ValiError) {
+    console.error(error.issues.map((err) => `${err.message}`).join("\n"));
+  } else if (error instanceof Error) {
     console.error(`Error: ${error.message}`);
   } else {
     console.error("An unknown error occurred");

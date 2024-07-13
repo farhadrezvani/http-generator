@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import * as v from "valibot";
 import { version } from "../package.json";
+import { configSchema, mergeOptions, type Options } from "./options";
 import { convertToHttpFile, loadOpenAPISpec } from "./transforms";
-import { handleError, validateOptions } from "./utils";
+import { handleError } from "./utils";
 
 const program = new Command();
 
@@ -24,28 +26,27 @@ program
 
 program.parse(process.argv);
 
-if (process.argv.length <= 2) {
-  program.help();
-}
-
 async function main() {
-  const options = program.opts();
+  const commanderOptions = program.opts<Options>();
+  const { hasConfig, options } = await mergeOptions(commanderOptions);
 
-  try {
-    validateOptions(options);
-    const openAPISpec = await loadOpenAPISpec(
-      options.input,
-      options.skipValidation
-    );
-    convertToHttpFile(
-      openAPISpec,
-      options.output,
-      options.baseUrl,
-      options.token
-    );
-  } catch (error) {
-    handleError(error);
+  if (process.argv.length <= 2 && !hasConfig) {
+    program.help();
   }
+
+  v.parse(configSchema, options);
+
+  const openAPISpec = await loadOpenAPISpec(
+    options.input,
+    options.skipValidation
+  );
+
+  convertToHttpFile(
+    openAPISpec,
+    options.output,
+    options.baseUrl,
+    options.token
+  );
 }
 
-main().catch(console.error);
+main().catch(handleError);
